@@ -1,4 +1,13 @@
-migrations
-.env
-instance
+# Ignore Python cache files
+__pycache__/
+*.pyc
+
+# Ignore environment folders
+env/
+venv/
+
+# Ignore system files
+.DS_Store
+Thumbs.db
+
 
