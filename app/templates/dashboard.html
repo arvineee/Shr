@@ -1,0 +1,234 @@
+<!-- templates/dashboard.html -->
+{% extends "base.html" %}
+{% block content %}
+<div class="row">
+    <div class="col-12 mb-4">
+        <div class="glass-card p-4">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h4 class="mb-1">
+                        <i class="bi bi-speedometer2 text-primary me-2"></i>
+                        Financial Dashboard
+                    </h4>
+                    <p class="text-muted mb-0">Comprehensive overview of your financial operations</p>
+                </div>
+                <span class="badge-gradient">
+                    <i class="bi bi-graph-up me-1"></i>Real-time Analytics
+                </span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Key Metrics -->
+<div class="row mb-4">
+    <div class="col-md-3 col-6 mb-3">
+        <div class="glass-card p-3 text-center">
+            <h6 class="text-primary">Total Settlements</h6>
+            <h4 class="text-primary">{{ total_settlements }}</h4>
+            <small class="text-muted">All Time</small>
+        </div>
+    </div>
+    <div class="col-md-3 col-6 mb-3">
+        <div class="glass-card p-3 text-center">
+            <h6 class="text-success">Active Members</h6>
+            <h4 class="text-success">{{ total_members }}</h4>
+            <small class="text-muted">Registered</small>
+        </div>
+    </div>
+    <div class="col-md-3 col-6 mb-3">
+        <div class="glass-card p-3 text-center">
+            <h6 class="text-warning">Total Advances</h6>
+            <h4 class="text-warning">KSH {{ "%.2f"|format(total_advances) }}</h4>
+            <small class="text-muted">Outstanding</small>
+        </div>
+    </div>
+    <div class="col-md-3 col-6 mb-3">
+        <div class="glass-card p-3 text-center">
+            <h6 class="text-info">Monthly Income</h6>
+            <h4 class="text-info">KSH {{ "%.2f"|format(monthly_income) }}</h4>
+            <small class="text-muted">This Month</small>
+        </div>
+    </div>
+</div>
+
+<!-- Debt Progress -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="glass-card p-4">
+            <h5 class="mb-3"><i class="bi bi-graph-down text-warning me-2"></i>Debt Repayment Progress</h5>
+            <div class="row align-items-center">
+                <div class="col-md-8">
+                    <div class="progress mb-2" style="height: 20px;">
+                        {% set debt_percentage = ((debt.total_debt - debt.remaining_debt) / debt.total_debt * 100) if debt.total_debt > 0 else 0 %}
+                        <div class="progress-bar bg-success" role="progressbar" style="width: {{ debt_percentage }}%;" 
+                             aria-valuenow="{{ debt_percentage }}" aria-valuemin="0" aria-valuemax="100">
+                            {{ "%.1f"|format(debt_percentage) }}%
+                        </div>
+                    </div>
+                    <div class="d-flex justify-content-between text-sm">
+                        <span class="text-muted">Paid: KSH {{ "%.2f"|format(debt.total_debt - debt.remaining_debt) }}</span>
+                        <span class="text-muted">Remaining: KSH {{ "%.2f"|format(debt.remaining_debt) }}</span>
+                    </div>
+                </div>
+                <div class="col-md-4 text-end">
+                    <h4 class="text-warning mb-0">KSH {{ "%.2f"|format(debt.total_debt) }}</h4>
+                    <small class="text-muted">Total Debt</small>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Recent Settlements -->
+    <div class="col-lg-6 mb-4">
+        <div class="glass-card p-4 h-100">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h5 class="mb-0"><i class="bi bi-receipt text-success me-2"></i>Recent Settlements</h5>
+                <a href="{{ url_for('main.history') }}" class="btn btn-sm btn-outline-primary">View All</a>
+            </div>
+            
+            {% if recent_settlements %}
+            <div class="list-group">
+                {% for settlement in recent_settlements %}
+                <a href="{{ url_for('main.settlement_detail', settlement_id=settlement.id) }}" class="list-group-item list-group-item-action glass-card border-0 mb-2">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="mb-1">{{ settlement.week_start.strftime('%b %d') }} - {{ settlement.week_end.strftime('%b %d') }}</h6>
+                            <small class="text-muted">Income: KSH {{ "%.2f"|format(settlement.total_income) }}</small>
+                        </div>
+                        <div class="text-end">
+                            <span class="badge bg-success">KSH {{ "%.2f"|format(settlement.net_distributable) }}</span>
+                            <br>
+                            <small class="text-muted">{{ settlement.created_at.strftime('%m/%d') }}</small>
+                        </div>
+                    </div>
+                </a>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="text-center py-4 text-muted">
+                <i class="bi bi-inbox display-6"></i>
+                <p class="mt-2">No settlements yet</p>
+                <a href="{{ url_for('main.index') }}" class="btn btn-primary btn-sm">Create First Settlement</a>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Recent Activity -->
+    <div class="col-lg-6 mb-4">
+        <div class="glass-card p-4 h-100">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h5 class="mb-0"><i class="bi bi-activity text-info me-2"></i>Recent Activity</h5>
+                <span class="badge bg-info">{{ recent_transactions|length }}</span>
+            </div>
+            
+            {% if recent_transactions %}
+            <div style="max-height: 400px; overflow-y: auto;">
+                {% for transaction in recent_transactions %}
+                <div class="d-flex align-items-center mb-3 p-2 glass-card rounded">
+                    <div class="flex-shrink-0">
+                        <i class="bi bi-{{ 
+                            'plus-circle' if 'CREATE' in transaction.action 
+                            else 'arrow-clockwise' if 'UPDATE' in transaction.action 
+                            else 'box-arrow-in-right' if 'LOGIN' in transaction.action 
+                            else 'activity' 
+                        }} text-{{ 
+                            'success' if 'CREATE' in transaction.action 
+                            else 'info' if 'UPDATE' in transaction.action 
+                            else 'warning' if 'LOGIN' in transaction.action 
+                            else 'secondary' 
+                        }} fs-5"></i>
+                    </div>
+                    <div class="flex-grow-1 ms-3">
+                        <small class="fw-bold">{{ transaction.action|replace('_', ' ')|title }}</small>
+                        <br>
+                        <small class="text-muted">{{ transaction.details }}</small>
+                        <br>
+                        <small class="text-muted">{{ transaction.created_at.strftime('%H:%M') }}</small>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="text-center py-4 text-muted">
+                <i class="bi bi-activity display-6"></i>
+                <p class="mt-2">No recent activity</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Monthly Summary -->
+<div class="row">
+    <div class="col-12">
+        <div class="glass-card p-4">
+            <h5 class="mb-3"><i class="bi bi-calendar-month text-primary me-2"></i>This Month's Summary</h5>
+            <div class="row text-center">
+                <div class="col-md-4 mb-3">
+                    <div class="glass-card bg-primary bg-opacity-10 border-primary p-3">
+                        <h6 class="text-primary">Monthly Income</h6>
+                        <h4 class="text-primary">KSH {{ "%.2f"|format(monthly_income) }}</h4>
+                    </div>
+                </div>
+                <div class="col-md-4 mb-3">
+                    <div class="glass-card bg-success bg-opacity-10 border-success p-3">
+                        <h6 class="text-success">Monthly Net</h6>
+                        <h4 class="text-success">KSH {{ "%.2f"|format(monthly_net) }}</h4>
+                    </div>
+                </div>
+                <div class="col-md-4 mb-3">
+                    <div class="glass-card bg-info bg-opacity-10 border-info p-3">
+                        <h6 class="text-info">Settlements</h6>
+                        <h4 class="text-info">{{ recent_settlements|length }}</h4>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Quick Actions -->
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="glass-card p-4">
+            <h5 class="mb-3"><i class="bi bi-lightning text-warning me-2"></i>Quick Actions</h5>
+            <div class="row g-3">
+                <div class="col-md-3 col-6">
+                    <a href="{{ url_for('main.index') }}" class="btn btn-primary w-100">
+                        <i class="bi bi-calculator me-2"></i>New Settlement
+                    </a>
+                </div>
+                <div class="col-md-3 col-6">
+                    <a href="{{ url_for('main.member_management') }}" class="btn btn-success w-100">
+                        <i class="bi bi-people me-2"></i>Manage Members
+                    </a>
+                </div>
+                <div class="col-md-3 col-6">
+                    <a href="{{ url_for('main.history') }}" class="btn btn-info w-100">
+                        <i class="bi bi-clock-history me-2"></i>View History
+                    </a>
+                </div>
+                <div class="col-md-3 col-6">
+                    <a href="{{ url_for('main.notifications') }}" class="btn btn-warning w-100">
+                        <i class="bi bi-bell me-2"></i>Notifications
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Initialize charts or additional dashboard functionality
+document.addEventListener('DOMContentLoaded', function() {
+    // Dashboard-specific JavaScript can go here
+    console.log('Dashboard loaded successfully');
+});
+</script>
+{% endblock %}

@@ -1,0 +1,190 @@
+<!-- templates/admin/manage_users.html -->
+{% extends "base.html" %}
+{% block content %}
+<div class="row">
+    <div class="col-12 mb-4">
+        <div class="glass-card p-4">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h4 class="mb-1">
+                        <i class="bi bi-people-fill text-success me-2"></i>
+                        User Management
+                    </h4>
+                    <p class="text-muted mb-0">Manage system users and permissions</p>
+                </div>
+                <span class="badge-gradient">
+                    <i class="bi bi-person me-1"></i>{{ users|length }} Users
+                </span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="glass-card p-4">
+    <div class="table-responsive">
+        <table class="table table-dark table-hover">
+            <thead>
+                <tr>
+                    <th>Username</th>
+                    <th>Email</th>
+                    <th>Role</th>
+                    <th>Status</th>
+                    <th>Created</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for user in users %}
+                <tr>
+                    <td>
+                        <strong>{{ user.username }}</strong>
+                    </td>
+                    <td>
+                        <small>{{ user.email }}</small>
+                    </td>
+                    <td>
+                        <span class="badge bg-{{ 'danger' if user.role == 'admin' else 'info' }}">
+                            {{ user.role|title }}
+                        </span>
+                    </td>
+                    <td>
+                        <span class="badge bg-{{ 'success' if user.is_active else 'secondary' }}">
+                            {{ 'Active' if user.is_active else 'Inactive' }}
+                        </span>
+                    </td>
+                    <td>
+                        <small class="text-muted">{{ user.created_at.strftime('%Y-%m-%d') }}</small>
+                    </td>
+                    <td>
+                        <div class="btn-group btn-group-sm">
+                            <button class="btn btn-outline-info" 
+                                    data-bs-toggle="modal" 
+                                    data-bs-target="#editUserModal"
+                                    data-user-id="{{ user.id }}"
+                                    data-username="{{ user.username }}"
+                                    data-email="{{ user.email }}"
+                                    data-role="{{ user.role }}"
+                                    data-is-active="{{ user.is_active }}">
+                                <i class="bi bi-pencil"></i>
+                            </button>
+                            {% if user.id != current_user.id %}
+                            <button class="btn btn-outline-{{ 'warning' if user.is_active else 'success' }} toggle-user-btn"
+                                    data-user-id="{{ user.id }}"
+                                    data-action="{{ 'deactivate' if user.is_active else 'activate' }}">
+                                <i class="bi bi-{{ 'pause' if user.is_active else 'play' }}"></i>
+                            </button>
+                            {% endif %}
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Edit User Modal -->
+<div class="modal fade" id="editUserModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content glass-card">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="bi bi-person-gear me-2"></i>Edit User</h5>
+                <button class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="editUserForm">
+                    <input type="hidden" name="user_id" id="editUserId">
+                    <div class="mb-3">
+                        <label class="form-label">Username</label>
+                        <input type="text" class="form-control" id="editUsername" readonly>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Email</label>
+                        <input type="email" name="email" class="form-control" id="editUserEmail" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Role</label>
+                        <select name="role" class="form-control" id="editUserRole" required>
+                            <option value="user">User</option>
+                            <option value="admin">Admin</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <div class="form-check">
+                            <input type="checkbox" name="is_active" class="form-check-input" id="editUserActive">
+                            <label class="form-check-label" for="editUserActive">Active User</label>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button class="btn btn-primary" id="saveUserBtn">Save Changes</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Edit User Modal
+    const editUserModal = document.getElementById('editUserModal');
+    editUserModal.addEventListener('show.bs.modal', function(event) {
+        const button = event.relatedTarget;
+        document.getElementById('editUserId').value = button.dataset.userId;
+        document.getElementById('editUsername').value = button.dataset.username;
+        document.getElementById('editUserEmail').value = button.dataset.email;
+        document.getElementById('editUserRole').value = button.dataset.role;
+        document.getElementById('editUserActive').checked = button.dataset.isActive === 'True';
+    });
+
+    // Save User Changes
+    document.getElementById('saveUserBtn').addEventListener('click', function() {
+        const userId = document.getElementById('editUserId').value;
+        const formData = new FormData(document.getElementById('editUserForm'));
+        const data = Object.fromEntries(formData);
+        
+        fetch(`/admin/api/update_user/${userId}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        })
+        .then(response => response.json())
+        .then(result => {
+            if (result.success) {
+                alert(result.message);
+                location.reload();
+            } else {
+                alert(result.message);
+            }
+        });
+    });
+
+    // Toggle User Status
+    document.querySelectorAll('.toggle-user-btn').forEach(button => {
+        button.addEventListener('click', function() {
+            const userId = this.dataset.userId;
+            const action = this.dataset.action;
+            
+            if (confirm(`Are you sure you want to ${action} this user?`)) {
+                fetch(`/admin/api/toggle_user/${userId}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                })
+                .then(response => response.json())
+                .then(result => {
+                    if (result.success) {
+                        alert(result.message);
+                        location.reload();
+                    } else {
+                        alert(result.message);
+                    }
+                });
+            }
+        });
+    });
+});
+</script>
+{% endblock %}

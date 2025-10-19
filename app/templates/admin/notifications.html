@@ -1,0 +1,311 @@
+<!-- templates/admin/notifications.html -->
+{% extends "base.html" %}
+{% block content %}
+<div class="row">
+    <div class="col-12 mb-4">
+        <div class="glass-card p-4">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h4 class="mb-1">
+                        <i class="bi bi-bell-fill text-warning me-2"></i>
+                        System Notifications
+                    </h4>
+                    <p class="text-muted mb-0">Manage and send system-wide notifications</p>
+                </div>
+                <div>
+                    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#sendNotificationModal">
+                        <i class="bi bi-send me-1"></i>Send Notification
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Quick Stats -->
+<div class="row mb-4">
+    <div class="col-md-3 col-6 mb-3">
+        <div class="glass-card p-3 text-center">
+            <h6 class="text-primary">Total Notifications</h6>
+            <h4 class="text-primary">{{ total_notifications }}</h4>
+        </div>
+    </div>
+    <div class="col-md-3 col-6 mb-3">
+        <div class="glass-card p-3 text-center">
+            <h6 class="text-info">Active Users</h6>
+            <h4 class="text-info">{{ notifications_by_user|length }}</h4>
+        </div>
+    </div>
+    <div class="col-md-3 col-6 mb-3">
+        <div class="glass-card p-3 text-center">
+            <h6 class="text-success">Unread</h6>
+            <h4 class="text-success">
+                {% set unread_count = [] %}
+                {% for user_data in notifications_by_user.values() %}
+                    {% for notification in user_data.notifications if not notification.is_read %}
+                        {% set _ = unread_count.append(1) %}
+                    {% endfor %}
+                {% endfor %}
+                {{ unread_count|length }}
+            </h4>
+        </div>
+    </div>
+    <div class="col-md-3 col-6 mb-3">
+        <div class="glass-card p-3 text-center">
+            <h6 class="text-warning">Today</h6>
+            <h4 class="text-warning">
+                {% set today_count = [] %}
+                {% for user_data in notifications_by_user.values() %}
+                    {% for notification in user_data.notifications if notification.created_at.date() == now().date() %}
+                        {% set _ = today_count.append(1) %}
+                    {% endfor %}
+                {% endfor %}
+                {{ today_count|length }}
+            </h4>
+        </div>
+    </div>
+</div>
+
+<!-- Notifications by User -->
+<div class="glass-card p-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h5 class="mb-0"><i class="bi bi-people text-info me-2"></i>Notifications by User</h5>
+        <button class="btn btn-sm btn-outline-danger" id="bulkDeleteBtn" style="display: none;">
+            <i class="bi bi-trash me-1"></i>Delete Selected
+        </button>
+    </div>
+
+    {% if notifications_by_user %}
+    <div class="accordion" id="notificationsAccordion">
+        {% for user_id, user_data in notifications_by_user.items() %}
+        <div class="accordion-item glass-card border-0 mb-3">
+            <h2 class="accordion-header">
+                <button class="accordion-button collapsed glass-card" type="button" data-bs-toggle="collapse" 
+                        data-bs-target="#user{{ user_id }}" style="background: rgba(255,255,255,0.05);">
+                    <div class="d-flex justify-content-between align-items-center w-100 me-3">
+                        <div>
+                            <span class="fw-bold">{{ user_data.user.username }}</span>
+                            <small class="text-muted ms-2">({{ user_data.user.email }})</small>
+                            <span class="badge bg-{{ 'success' if user_data.user.is_active else 'secondary' }} ms-2">
+                                {{ 'Active' if user_data.user.is_active else 'Inactive' }}
+                            </span>
+                        </div>
+                        <div>
+                            <span class="badge bg-primary">{{ user_data.notifications|length }} notifications</span>
+                            {% set user_unread = user_data.notifications|selectattr('is_read', 'equalto', false)|list %}
+                            {% if user_unread %}
+                            <span class="badge bg-warning">{{ user_unread|length }} unread</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                </button>
+            </h2>
+            <div id="user{{ user_id }}" class="accordion-collapse collapse" data-bs-parent="#notificationsAccordion">
+                <div class="accordion-body">
+                    <div class="list-group">
+                        {% for notification in user_data.notifications %}
+                        <div class="list-group-item list-group-item-action glass-card border-0 mb-2 {% if not notification.is_read %}bg-warning bg-opacity-10{% endif %}">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div class="flex-grow-1">
+                                    <div class="d-flex justify-content-between align-items-center mb-1">
+                                        <h6 class="mb-0 {% if not notification.is_read %}text-warning fw-bold{% endif %}">
+                                            {{ notification.title }}
+                                        </h6>
+                                        <div>
+                                            <small class="text-muted me-2">{{ notification.created_at.strftime('%Y-%m-%d %H:%M') }}</small>
+                                            <input type="checkbox" class="form-check-input notification-checkbox" 
+                                                   value="{{ notification.id }}" data-user-id="{{ user_id }}">
+                                        </div>
+                                    </div>
+                                    <p class="mb-1 small">{{ notification.message }}</p>
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <small class="text-muted">
+                                            Status: 
+                                            <span class="badge bg-{{ 'success' if notification.is_read else 'warning' }}">
+                                                {{ 'Read' if notification.is_read else 'Unread' }}
+                                            </span>
+                                        </small>
+                                        <div>
+                                            <button class="btn btn-sm btn-outline-danger delete-notification-btn" 
+                                                    data-notification-id="{{ notification.id }}">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="text-center py-5">
+        <i class="bi bi-bell-slash display-1 text-muted"></i>
+        <h4 class="text-muted mt-3">No notifications in system</h4>
+        <p class="text-muted">Send your first notification to get started.</p>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Send Notification Modal -->
+<div class="modal fade" id="sendNotificationModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content glass-card">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="bi bi-send me-2"></i>Send System Notification</h5>
+                <button class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="sendNotificationForm">
+                    <div class="mb-3">
+                        <label class="form-label">Notification Title</label>
+                        <input type="text" name="title" class="form-control" placeholder="Enter notification title" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Message</label>
+                        <textarea name="message" class="form-control" rows="4" placeholder="Enter notification message" required></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Send To</label>
+                        <div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="target_users" value="all" id="targetAll" checked>
+                                <label class="form-check-label" for="targetAll">
+                                    All Active Users
+                                </label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="target_users" value="specific" id="targetSpecific">
+                                <label class="form-check-label" for="targetSpecific">
+                                    Specific Users
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mb-3" id="specificUsersSection" style="display: none;">
+                        <label class="form-label">Select Users</label>
+                        <div class="glass-card p-3" style="max-height: 200px; overflow-y: auto;">
+                            {% for user_data in notifications_by_user.values() %}
+                            <div class="form-check">
+                                <input class="form-check-input user-checkbox" type="checkbox" 
+                                       name="specific_user_ids" value="{{ user_data.user.id }}" id="user{{ user_data.user.id }}">
+                                <label class="form-check-label" for="user{{ user_data.user.id }}">
+                                    {{ user_data.user.username }} ({{ user_data.user.email }})
+                                    <span class="badge bg-{{ 'success' if user_data.user.is_active else 'secondary' }} ms-1">
+                                        {{ 'Active' if user_data.user.is_active else 'Inactive' }}
+                                    </span>
+                                </label>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button class="btn btn-primary" id="sendNotificationBtn">Send Notification</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Toggle specific users section
+    document.querySelectorAll('input[name="target_users"]').forEach(radio => {
+        radio.addEventListener('change', function() {
+            const specificSection = document.getElementById('specificUsersSection');
+            specificSection.style.display = this.value === 'specific' ? 'block' : 'none';
+        });
+    });
+
+    // Send notification
+    document.getElementById('sendNotificationBtn').addEventListener('click', function() {
+        const formData = new FormData(document.getElementById('sendNotificationForm'));
+        const data = Object.fromEntries(formData);
+        
+        // Handle checkbox values for specific users
+        if (data.target_users === 'specific') {
+            data.specific_user_ids = Array.from(document.querySelectorAll('.user-checkbox:checked'))
+                .map(checkbox => parseInt(checkbox.value));
+        }
+        
+        fetch('/admin/api/send_notification', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        })
+        .then(response => response.json())
+        .then(result => {
+            if (result.success) {
+                alert(result.message);
+                location.reload();
+            } else {
+                alert(result.message);
+            }
+        });
+    });
+
+    // Delete individual notification
+    document.querySelectorAll('.delete-notification-btn').forEach(button => {
+        button.addEventListener('click', function() {
+            const notificationId = this.dataset.notificationId;
+            if (confirm('Are you sure you want to delete this notification?')) {
+                fetch(`/admin/api/delete_notification/${notificationId}`, {
+                    method: 'POST'
+                })
+                .then(response => response.json())
+                .then(result => {
+                    if (result.success) {
+                        this.closest('.list-group-item').remove();
+                        alert('Notification deleted successfully');
+                    }
+                });
+            }
+        });
+    });
+
+    // Bulk delete functionality
+    const bulkDeleteBtn = document.getElementById('bulkDeleteBtn');
+    const checkboxes = document.querySelectorAll('.notification-checkbox');
+    
+    checkboxes.forEach(checkbox => {
+        checkbox.addEventListener('change', function() {
+            const selectedCount = document.querySelectorAll('.notification-checkbox:checked').length;
+            bulkDeleteBtn.style.display = selectedCount > 0 ? 'block' : 'none';
+            bulkDeleteBtn.textContent = `Delete Selected (${selectedCount})`;
+        });
+    });
+
+    bulkDeleteBtn.addEventListener('click', function() {
+        const selectedIds = Array.from(document.querySelectorAll('.notification-checkbox:checked'))
+            .map(checkbox => parseInt(checkbox.value));
+        
+        if (selectedIds.length === 0) return;
+        
+        if (confirm(`Are you sure you want to delete ${selectedIds.length} notifications?`)) {
+            fetch('/admin/api/bulk_delete_notifications', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ notification_ids: selectedIds })
+            })
+            .then(response => response.json())
+            .then(result => {
+                if (result.success) {
+                    alert(result.message);
+                    location.reload();
+                } else {
+                    alert(result.message);
+                }
+            });
+        }
+    });
+});
+</script>
+{% endblock %}

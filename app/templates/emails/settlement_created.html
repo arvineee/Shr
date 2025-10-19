@@ -1,0 +1,102 @@
+<!-- templates/emails/settlement_created.html -->
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <style>
+        body { 
+            font-family: 'Segoe UI', Arial, sans-serif; 
+            line-height: 1.6; 
+            color: #333; 
+            max-width: 600px; 
+            margin: 0 auto; 
+            padding: 20px; 
+        }
+        .header { 
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); 
+            color: white; 
+            padding: 30px; 
+            text-align: center; 
+            border-radius: 10px 10px 0 0; 
+        }
+        .content { 
+            background: #f8f9fa; 
+            padding: 30px; 
+            border-radius: 0 0 10px 10px; 
+        }
+        .summary { 
+            background: white; 
+            padding: 20px; 
+            border-radius: 8px; 
+            margin: 20px 0; 
+        }
+        .footer { 
+            text-align: center; 
+            margin-top: 30px; 
+            padding-top: 20px; 
+            border-top: 1px solid #dee2e6; 
+            color: #6c757d; 
+            font-size: 0.9em; 
+        }
+        .button { 
+            display: inline-block; 
+            background: #007bff; 
+            color: white; 
+            padding: 12px 30px; 
+            text-decoration: none; 
+            border-radius: 5px; 
+            margin: 20px 0; 
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>📊 New Settlement Created</h1>
+        <p>FinanceAllocator Pro Weekly Report</p>
+    </div>
+    
+    <div class="content">
+        <h2>Hello Team,</h2>
+        
+        <p>A new weekly settlement has been created and is ready for review.</p>
+        
+        <div class="summary">
+            <h3>Settlement Summary:</h3>
+            <p><strong>Week:</strong> {{ settlement.week_start.strftime('%B %d, %Y') }} - {{ settlement.week_end.strftime('%B %d, %Y') }}</p>
+            <p><strong>Total Income:</strong> KSH {{ "%.2f"|format(settlement.total_income) }}</p>
+            <p><strong>Total Expenses:</strong> KSH {{ "%.2f"|format(settlement.total_expenses) }}</p>
+            <p><strong>Net Distributable:</strong> KSH {{ "%.2f"|format(settlement.net_distributable) }}</p>
+            <p><strong>Created By:</strong> {{ creator.username if creator else 'System' }}</p>
+            <p><strong>Created Date:</strong> {{ settlement.created_at.strftime('%B %d, %Y at %H:%M') }}</p>
+        </div>
+        
+        <p>Key highlights from this week's settlement:</p>
+        <ul>
+            <li>Debt repayment: KSH {{ "%.2f"|format(settlement.debt_deduction) }}</li>
+            <li>Total advances: KSH {{ "%.2f"|format(settlement.total_advances) }}</li>
+            {% if settlement.rent_deduction %}
+            <li>Rent payment: KSH {{ "%.2f"|format(settlement.rent_deduction) }}</li>
+            {% endif %}
+            {% if settlement.milk_deduction %}
+            <li>Milk bill: KSH {{ "%.2f"|format(settlement.milk_deduction) }}</li>
+            {% endif %}
+        </ul>
+        
+        <div style="text-align: center;">
+            <a href="{{ url_for('main.settlement_detail', settlement_id=settlement.id, _external=True) }}" class="button">
+                View Full Settlement Details
+            </a>
+        </div>
+        
+        <p>Please review the settlement and mark your payments as received once processed.</p>
+        
+        <p>Best regards,<br>
+        <strong>The FinanceAllocator Pro Team</strong></p>
+    </div>
+    
+    <div class="footer">
+        <p>This is an automated notification. Please do not reply to this email.</p>
+        <p>&copy; 2024 FinanceAllocator Pro. All rights reserved.</p>
+    </div>
+</body>
+</html>

@@ -1,0 +1,110 @@
+<!-- templates/notifications.html -->
+{% extends "base.html" %}
+{% block content %}
+<div class="row">
+    <div class="col-12 mb-4">
+        <div class="glass-card p-4">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h4 class="mb-1">
+                        <i class="bi bi-bell text-info me-2"></i>
+                        Notifications
+                    </h4>
+                    <p class="text-muted mb-0">Your recent alerts and system notifications</p>
+                </div>
+                <div>
+                    <button class="btn btn-outline-primary" id="markAllReadBtn">
+                        <i class="bi bi-check-all me-1"></i>Mark All as Read
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-12">
+        <div class="glass-card p-4">
+            {% if notifications %}
+            <div class="list-group">
+                {% for notification in notifications %}
+                <div class="list-group-item list-group-item-action glass-card border-0 mb-3 {% if not notification.is_read %}bg-primary bg-opacity-10{% endif %}">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div class="flex-grow-1">
+                            <div class="d-flex justify-content-between">
+                                <h6 class="mb-1 {% if not notification.is_read %}text-primary fw-bold{% endif %}">
+                                    {{ notification.title }}
+                                </h6>
+                                <small class="text-muted">{{ notification.created_at.strftime('%Y-%m-%d %H:%M') }}</small>
+                            </div>
+                            <p class="mb-1">{{ notification.message }}</p>
+                        </div>
+                        {% if not notification.is_read %}
+                        <button class="btn btn-sm btn-outline-success ms-2 mark-read-btn" data-notification-id="{{ notification.id }}">
+                            <i class="bi bi-check"></i>
+                        </button>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            
+            <!-- Pagination would go here -->
+            <div class="d-flex justify-content-between align-items-center mt-4">
+                <small class="text-muted">Showing {{ notifications|length }} notifications</small>
+                <div>
+                    <button class="btn btn-sm btn-outline-secondary" disabled>Previous</button>
+                    <button class="btn btn-sm btn-outline-secondary" disabled>Next</button>
+                </div>
+            </div>
+            {% else %}
+            <div class="text-center py-5">
+                <i class="bi bi-bell-slash display-1 text-muted"></i>
+                <h4 class="text-muted mt-3">No notifications</h4>
+                <p class="text-muted">You're all caught up! New notifications will appear here.</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Mark individual notification as read
+    document.querySelectorAll('.mark-read-btn').forEach(button => {
+        button.addEventListener('click', function() {
+            const notificationId = this.dataset.notificationId;
+            fetch(`/api/mark_notification_read/${notificationId}`, {
+                method: 'POST'
+            })
+            .then(response => response.json())
+            .then(result => {
+                if (result.success) {
+                    this.closest('.list-group-item').classList.remove('bg-primary', 'bg-opacity-10');
+                    this.remove();
+                }
+            });
+        });
+    });
+
+    // Mark all as read
+    document.getElementById('markAllReadBtn').addEventListener('click', function() {
+        fetch('/api/mark_all_notifications_read', {
+            method: 'POST'
+        })
+        .then(response => response.json())
+        .then(result => {
+            if (result.success) {
+                document.querySelectorAll('.mark-read-btn').forEach(btn => btn.remove());
+                document.querySelectorAll('.list-group-item').forEach(item => {
+                    item.classList.remove('bg-primary', 'bg-opacity-10');
+                });
+                alert('All notifications marked as read');
+            }
+        });
+    });
+});
+</script>
+{% endblock %}

@@ -1,0 +1,192 @@
+<!-- templates/admin/dashboard.html -->
+{% extends "base.html" %}
+{% block content %}
+<div class="row">
+    <div class="col-12 mb-4">
+        <div class="glass-card p-4">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h4 class="mb-1">
+                        <i class="bi bi-shield-lock text-warning me-2"></i>
+                        Admin Dashboard
+                    </h4>
+                    <p class="text-muted mb-0">System administration and monitoring</p>
+                </div>
+                <span class="badge bg-warning">
+                    <i class="bi bi-person-gear me-1"></i>Administrator
+                </span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Admin Stats -->
+<div class="row mb-4">
+    <div class="col-md-3 col-6 mb-3">
+        <div class="glass-card p-3 text-center">
+            <h6 class="text-primary">Total Users</h6>
+            <h4 class="text-primary">{{ stats.total_users }}</h4>
+            <small class="text-muted">Registered</small>
+        </div>
+    </div>
+    <div class="col-md-3 col-6 mb-3">
+        <div class="glass-card p-3 text-center">
+            <h6 class="text-success">Total Settlements</h6>
+            <h4 class="text-success">{{ stats.total_settlements }}</h4>
+            <small class="text-muted">Created</small>
+        </div>
+    </div>
+    <div class="col-md-3 col-6 mb-3">
+        <div class="glass-card p-3 text-center">
+            <h6 class="text-info">Total Transactions</h6>
+            <h4 class="text-info">{{ stats.total_transactions }}</h4>
+            <small class="text-muted">Logged</small>
+        </div>
+    </div>
+    <div class="col-md-3 col-6 mb-3">
+        <div class="glass-card p-3 text-center">
+            <h6 class="text-warning">System Status</h6>
+            <h4 class="text-warning">Active</h4>
+            <small class="text-muted">All Systems OK</small>
+        </div>
+    </div>
+</div>
+
+<!-- Quick Actions -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="glass-card p-4">
+            <h5 class="mb-3"><i class="bi bi-lightning me-2"></i>Quick Actions</h5>
+            <div class="row g-3">
+                <div class="col-md-3 col-6">
+                    <a href="{{ url_for('admin.manage_users') }}" class="btn btn-outline-primary w-100">
+                        <i class="bi bi-people me-2"></i>Manage Users
+                    </a>
+                </div>
+                <div class="col-md-3 col-6">
+                    <a href="{{ url_for('admin.system_logs') }}" class="btn btn-outline-info w-100">
+                        <i class="bi bi-list-check me-2"></i>System Logs
+                    </a>
+                </div>
+                <div class="col-md-3 col-6">
+                    <a href="{{ url_for('main.member_management') }}" class="btn btn-outline-success w-100">
+                        <i class="bi bi-person-gear me-2"></i>Member Settings
+                    </a>
+                </div>
+                <div class="col-md-3 col-6">
+                    <button class="btn btn-outline-warning w-100" data-bs-toggle="modal" data-bs-target="#systemSettingsModal">
+                        <i class="bi bi-gear me-2"></i>System Settings
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Recent Settlements -->
+<div class="row">
+    <div class="col-md-6 mb-4">
+        <div class="glass-card p-4 h-100">
+            <h5 class="mb-3"><i class="bi bi-clock-history text-info me-2"></i>Recent Settlements</h5>
+            {% if stats.recent_settlements %}
+            <div class="list-group">
+                {% for settlement in stats.recent_settlements %}
+                <a href="{{ url_for('main.settlement_detail', settlement_id=settlement.id) }}" class="list-group-item list-group-item-action glass-card border-0 mb-2">
+                    <div class="d-flex justify-content-between">
+                        <small class="fw-bold">{{ settlement.week_start.strftime('%b %d') }} - {{ settlement.week_end.strftime('%b %d') }}</small>
+                        <small class="text-success">KSH {{ "%.2f"|format(settlement.net_distributable) }}</small>
+                    </div>
+                    <small class="text-muted">
+                        Income: KSH {{ "%.2f"|format(settlement.total_income) }} | 
+                        Created: {{ settlement.created_at.strftime('%m/%d') }}
+                    </small>
+                </a>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="text-center py-3 text-muted">
+                <i class="bi bi-inbox display-6"></i>
+                <p class="mt-2">No settlements found</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- System Information -->
+    <div class="col-md-6 mb-4">
+        <div class="glass-card p-4 h-100">
+            <h5 class="mb-3"><i class="bi bi-info-circle text-primary me-2"></i>System Information</h5>
+            <div class="row g-3">
+                <div class="col-12">
+                    <div class="glass-card bg-primary bg-opacity-10 border-primary p-3">
+                        <h6 class="text-primary">Database Status</h6>
+                        <small class="text-muted">Connected and operational</small>
+                    </div>
+                </div>
+                <div class="col-12">
+                    <div class="glass-card bg-success bg-opacity-10 border-success p-3">
+                        <h6 class="text-success">Email Service</h6>
+                        <small class="text-muted">Ready for notifications</small>
+                    </div>
+                </div>
+                <div class="col-12">
+                    <div class="glass-card bg-info bg-opacity-10 border-info p-3">
+                        <h6 class="text-info">Security</h6>
+                        <small class="text-muted">Authentication system active</small>
+                    </div>
+                </div>
+                <div class="col-12">
+                    <div class="glass-card bg-warning bg-opacity-10 border-warning p-3">
+                        <h6 class="text-warning">Last Backup</h6>
+                        <small class="text-muted">{{ now().strftime('%Y-%m-%d %H:%M') }}</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- System Settings Modal -->
+<div class="modal fade" id="systemSettingsModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content glass-card">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="bi bi-gear me-2"></i>System Settings</h5>
+                <button class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="systemSettingsForm">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Application Name</label>
+                            <input type="text" class="form-control" value="FinanceAllocator Pro" readonly>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Version</label>
+                            <input type="text" class="form-control" value="2.0.0" readonly>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label">Email Notifications</label>
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" checked>
+                                <label class="form-check-label">Enable email notifications</label>
+                            </div>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label">Auto Backup</label>
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" checked>
+                                <label class="form-check-label">Enable automatic backups</label>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button class="btn btn-primary">Save Settings</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,291 @@
+<!-- templates/settlement_detail.html -->
+{% extends "base.html" %}
+{% block content %}
+<div class="row">
+    <div class="col-12 mb-4">
+        <div class="glass-card p-4">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h4 class="mb-1">
+                        <i class="bi bi-receipt text-success me-2"></i>
+                        Settlement Details
+                    </h4>
+                    <p class="text-muted mb-0">
+                        Week of {{ settlement.week_start.strftime('%B %d, %Y') }} — {{ settlement.week_end.strftime('%B %d, %Y') }}
+                    </p>
+                    {% if settlement.felix_substitute %}
+                    <span class="badge bg-warning mt-1">
+                        <i class="bi bi-person-badge me-1"></i>Felix Substitute Week
+                    </span>
+                    {% endif %}
+                    {% if settlement.is_completed %}
+                    <span class="badge bg-success mt-1">
+                        <i class="bi bi-check-circle me-1"></i>Transaction Completed
+                    </span>
+                    {% endif %}
+                </div>
+                <div class="badge bg-success fs-6">
+                    <i class="bi bi-calendar-check me-1"></i>
+                    {{ settlement.created_at.strftime('%Y-%m-%d') }}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% if settlement.felix_substitute %}
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="glass-card p-3 bg-warning bg-opacity-10 border-warning">
+            <div class="d-flex align-items-center">
+                <i class="bi bi-person-badge text-warning fs-4 me-3"></i>
+                <div>
+                    <h6 class="text-warning mb-1">Felix Substitute Week</h6>
+                    <p class="mb-0 text-muted">
+                        <strong>Felix is receiving shares only (no salary this week).</strong> 
+                        Salary was paid to substitute, but Felix's shares (8.6%) were calculated as part of his payout.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<div class="row">
+    <!-- Income & Expenses -->
+    <div class="col-lg-6 mb-4">
+        <div class="glass-card p-4 h-100">
+            <h5 class="mb-3"><i class="bi bi-arrow-up-circle text-success me-2"></i>Income & Expenses</h5>
+            <div class="row g-3">
+                <div class="col-6">
+                    <div class="glass-card bg-success bg-opacity-10 border-success">
+                        <div class="card-body text-center p-3">
+                            <h6 class="text-success">Total Income</h6>
+                            <h4 class="text-success">KSH {{ "%.2f"|format(settlement.total_income) }}</h4>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-6">
+                    <div class="glass-card bg-danger bg-opacity-10 border-danger">
+                        <div class="card-body text-center p-3">
+                            <h6 class="text-danger">Total Expenses</h6>
+                            <h4 class="text-danger">KSH {{ "%.2f"|format(settlement.total_expenses) }}</h4>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Deductions -->
+    <div class="col-lg-6 mb-4">
+        <div class="glass-card p-4 h-100">
+            <h5 class="mb-3"><i class="bi bi-arrow-down-circle text-warning me-2"></i>Deductions</h5>
+            <div class="row g-2">
+                <div class="col-6">
+                    <div class="d-flex justify-content-between border-bottom py-2">
+                        <span>Salary (Felix):</span>
+                        <strong class="{% if settlement.felix_substitute %}text-muted{% else %}text-danger{% endif %}">
+                            KSH {{ "%.2f"|format(settlement.salary_deduction) }}
+                            {% if settlement.felix_substitute %}
+                            <small class="text-muted">(waived)</small>
+                            {% endif %}
+                        </strong>
+                    </div>
+                </div>
+                <div class="col-6">
+                    <div class="d-flex justify-content-between border-bottom py-2">
+                        <span>Debt (10%):</span>
+                        <strong class="text-warning">KSH {{ "%.2f"|format(settlement.debt_deduction) }}</strong>
+                    </div>
+                </div>
+                <div class="col-6">
+                    <div class="d-flex justify-content-between border-bottom py-2">
+                        <span>Rent:</span>
+                        <strong class="text-info">KSH {{ "%.2f"|format(settlement.rent_deduction or 0) }}</strong>
+                    </div>
+                </div>
+                <div class="col-6">
+                    <div class="d-flex justify-content-between border-bottom py-2">
+                        <span>Milk:</span>
+                        <strong class="text-info">KSH {{ "%.2f"|format(settlement.milk_deduction or 0) }}</strong>
+                    </div>
+                </div>
+                <div class="col-12">
+                    <div class="d-flex justify-content-between border-bottom py-2">
+                        <span>Total Advances:</span>
+                        <strong class="text-primary">KSH {{ "%.2f"|format(settlement.total_advances) }}</strong>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Net Distributable -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="glass-card p-4 bg-primary bg-opacity-10 border-primary">
+            <div class="row align-items-center">
+                <div class="col-md-8">
+                    <h5 class="text-primary mb-1"><i class="bi bi-pie-chart me-2"></i>Net Distributable Amount</h5>
+                    <p class="text-muted mb-0">Amount available for distribution after all deductions</p>
+                </div>
+                <div class="col-md-4 text-end">
+                    <h2 class="text-primary">KSH {{ "%.2f"|format(settlement.net_distributable) }}</h2>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Advance History for This Settlement -->
+{% if settlement_advances %}
+<div class="glass-card p-4 mb-4">
+    <h5 class="mb-3"><i class="bi bi-clock-history text-info me-2"></i>Advance History for This Week</h5>
+    <div class="table-responsive">
+        <table class="table table-dark table-sm">
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>Member</th>
+                    <th>Amount</th>
+                    <th>Description</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for advance in settlement_advances %}
+                <tr>
+                    <td><small>{{ advance.advance_date.strftime('%Y-%m-%d') }}</small></td>
+                    <td>
+                        {% set member_color = namespace(value='#3498db') %}
+                        {% for member in members %}
+                            {% if member.name == advance.member_name %}
+                                {% set member_color.value = member.color %}
+                            {% endif %}
+                        {% endfor %}
+                        <span class="badge" style="background: {{ member_color.value }}; color: white;">
+                            {{ advance.member_name }}
+                        </span>
+                    </td>
+                    <td class="text-warning fw-bold">KSH {{ "%.2f"|format(advance.amount) }}</td>
+                    <td><small class="text-muted">{{ advance.description or '-' }}</small></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endif %}
+
+<!-- Payouts Table -->
+<div class="glass-card p-4">
+    <h5 class="mb-3"><i class="bi bi-people-fill text-purple me-2"></i>Member Payouts</h5>
+    <div class="table-responsive">
+        <table class="table table-dark table-hover">
+            <thead class="table-dark">
+                <tr>
+                    <th>Member</th>
+                    <th>Share %</th>
+                    <th>Gross Share</th>
+                    <th>Advance</th>
+                    <th>Net Payout</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for it in items %}
+                <tr>
+                    <td>
+                        <div class="d-flex align-items-center">
+                            <div class="rounded-circle bg-primary bg-opacity-10 p-2 me-3">
+                                <i class="bi bi-person-fill text-primary"></i>
+                            </div>
+                            <strong>{{ it.member_name }}</strong>
+                            {% if it.member_name == 'Felix' and settlement.felix_substitute %}
+                            <span class="badge bg-warning ms-2">Substitute Week</span>
+                            {% endif %}
+                        </div>
+                    </td>
+                    <td><span class="badge bg-secondary">{{ "%.1f"|format(it.share_ratio * 100) }}%</span></td>
+                    <td>KSH {{ "%.2f"|format(it.gross_share) }}</td>
+                    <td>
+                        <span class="{% if it.advance > 0 %}text-warning{% else %}text-muted{% endif %}">
+                            KSH {{ "%.2f"|format(it.advance) }}
+                        </span>
+                    </td>
+                    <td>
+                        <strong class="{% if it.net_payout > 0 %}text-success{% else %}text-danger{% endif %}">
+                            KSH {{ "%.2f"|format(it.net_payout) }}
+                        </strong>
+                    </td>
+                    <td>
+                        {% if it.is_paid %}
+                        <span class="badge bg-success">Paid</span>
+                        {% elif it.received_at %}
+                        <span class="badge bg-info">Received</span>
+                        {% elif it.net_payout > 0 %}
+                        <span class="badge bg-warning">Pending</span>
+                        {% else %}
+                        <span class="badge bg-secondary">Advance Covered</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if it.net_payout > 0 and not it.is_paid and not it.received_at %}
+                        <button class="btn btn-sm btn-outline-success mark-received" data-item-id="{{ it.id }}">
+                            <i class="bi bi-check-circle me-1"></i>Mark Received
+                        </button>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <div class="mt-4 d-flex gap-2 flex-wrap">
+        <a class="btn btn-outline-secondary" href="/history">
+            <i class="bi bi-arrow-left me-1"></i>Back to History
+        </a>
+        <a class="btn btn-primary" href="/">
+            <i class="bi bi-plus-circle me-1"></i>New Settlement
+        </a>
+        {% if current_user.role == 'admin' and not settlement.is_completed %}
+        <form method="POST" action="{{ url_for('admin.complete_transaction', settlement_id=settlement.id) }}" class="d-inline">
+            <button type="submit" class="btn btn-success" onclick="return confirm('Mark this transaction as completed? This will notify all members via email.')">
+                <i class="bi bi-check-all me-1"></i>Complete Transaction
+            </button>
+        </form>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Mark as Received
+    document.querySelectorAll('.mark-received').forEach(button => {
+        button.addEventListener('click', function() {
+            const itemId = this.dataset.itemId;
+            if (confirm('Mark this payment as received?')) {
+                fetch(`/api/mark_received/${itemId}`, {
+                    method: 'POST'
+                })
+                .then(response => response.json())
+                .then(result => {
+                    if (result.success) {
+                        alert(result.message);
+                        location.reload();
+                    } else {
+                        alert(result.message);
+                    }
+                });
+            }
+        });
+    });
+});
+</script>
+{% endblock %}
