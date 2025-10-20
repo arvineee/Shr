@@ -260,6 +260,95 @@
         </form>
         {% endif %}
     </div>
+
+    <!-- Add this to the actions section in settlement_detail.html -->
+<!-- After the Complete Transaction button -->
+
+<div class="mt-4 d-flex gap-2 flex-wrap">
+    <a class="btn btn-outline-secondary" href="/history">
+        <i class="bi bi-arrow-left me-1"></i>Back to History
+    </a>
+    <a class="btn btn-primary" href="/">
+        <i class="bi bi-plus-circle me-1"></i>New Settlement
+    </a>
+
+    {% if current_user.role == 'admin' %}
+        {% if not settlement.is_completed %}
+        <form method="POST" action="{{ url_for('admin.complete_transaction', settlement_id=settlement.id) }}" class="d-inline">
+            <button type="submit" class="btn btn-success" onclick="return confirm('Mark this transaction as completed? This will notify all members via email.')">
+                <i class="bi bi-check-all me-1"></i>Complete Transaction
+            </button>
+        </form>
+
+        <!-- Add Delete Button for Pending Settlements -->
+        <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#deleteSettlementModal">
+            <i class="bi bi-trash me-1"></i>Delete Settlement
+        </button>
+        {% endif %}
+    {% endif %}
+</div>
+
+<!-- Add this modal at the bottom of the file, before the scripts block -->
+{% if current_user.role == 'admin' and not settlement.is_completed %}
+<!-- Delete Settlement Confirmation Modal -->
+<div class="modal fade" id="deleteSettlementModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content glass-card">
+            <div class="modal-header">
+                <h5 class="modal-title text-danger">
+                    <i class="bi bi-exclamation-triangle me-2"></i>Delete Settlement
+                </h5>
+                <button class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-danger">
+                    <h6 class="alert-heading">Warning: This action cannot be undone!</h6>
+                    <p class="mb-0">You are about to permanently delete this settlement and all associated data.</p>
+                </div>
+
+                <div class="glass-card p-3 mb-3">
+                    <h6>Settlement Details:</h6>
+                    <div class="row">
+                        <div class="col-6">
+                            <small class="text-muted">Week:</small><br>
+                            <strong>{{ settlement.week_start.strftime('%b %d, %Y') }} - {{ settlement.week_end.strftime('%b %d, %Y') }}</strong>
+                        </div>
+                        <div class="col-6">
+                            <small class="text-muted">Income:</small><br>
+                            <strong class="text-success">KSH {{ "%.2f"|format(settlement.total_income) }}</strong>
+                        </div>
+                    </div>
+                    <div class="row mt-2">
+                        <div class="col-6">
+                            <small class="text-muted">Net Distributable:</small><br>
+                            <strong class="text-primary">KSH {{ "%.2f"|format(settlement.net_distributable) }}</strong>
+                        </div>
+                        <div class="col-6">
+                            <small class="text-muted">Members:</small><br>
+                            <strong>{{ items|length }} members</strong>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-check mb-3">
+                    <input class="form-check-input" type="checkbox" id="confirmDelete">
+                    <label class="form-check-label text-danger" for="confirmDelete">
+                        I understand this will permanently delete all settlement data and reverse debt payments
+                    </label>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <form method="POST" action="{{ url_for('admin.delete_settlement', settlement_id=settlement.id) }}" class="d-inline" id="deleteSettlementForm">
+                    <button type="submit" class="btn btn-danger" id="confirmDeleteBtn" disabled>
+                        <i class="bi bi-trash me-1"></i>Delete Settlement
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
 </div>
 {% endblock %}
 
@@ -287,5 +376,37 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 });
+// Add this to the scripts block in settlement_detail.html
+{% if current_user.role == 'admin' and not settlement.is_completed %}
+// Delete Settlement Confirmation
+document.addEventListener('DOMContentLoaded', function() {
+    const confirmCheckbox = document.getElementById('confirmDelete');
+    const confirmBtn = document.getElementById('confirmDeleteBtn');
+
+    if (confirmCheckbox && confirmBtn) {
+        confirmCheckbox.addEventListener('change', function() {
+            confirmBtn.disabled = !this.checked;
+        });
+
+        // Form submission handler
+        document.getElementById('deleteSettlementForm').addEventListener('submit', function(e) {
+            if (!confirmCheckbox.checked) {
+                e.preventDefault();
+                alert('Please confirm deletion by checking the checkbox');
+                return false;
+            }
+
+            if (!confirm('Final warning: This will permanently delete the settlement. Continue?')) {
+                e.preventDefault();
+                return false;
+            }
+
+            // Show loading state
+            confirmBtn.innerHTML = '<i class="bi bi-arrow-repeat spinner-border spinner-border-sm me-1"></i> Deleting...';
+            confirmBtn.disabled = true;
+        });
+    }
+});
+{% endif %}
 </script>
 {% endblock %}

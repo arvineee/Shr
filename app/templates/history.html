@@ -100,11 +100,22 @@
                         <span class="badge bg-warning">Pending</span>
                         {% endif %}
                     </td>
-                    <td>
-                        <a class="btn btn-sm btn-outline-primary" href="/settlement/{{ s.id }}">
-                            <i class="bi bi-eye me-1"></i>View
-                        </a>
-                    </td>
+                    <!-- Update the actions column in history.html table -->
+<td>
+    <div class="btn-group btn-group-sm">
+        <a class="btn btn-outline-primary" href="/settlement/{{ s.id }}">
+            <i class="bi bi-eye me-1"></i>View
+        </a>
+        {% if current_user.role == 'admin' and not s.is_completed %}
+        <button class="btn btn-outline-danger delete-settlement-btn" 
+                data-settlement-id="{{ s.id }}"
+                data-settlement-week="{{ s.week_start.strftime('%b %d') }} - {{ s.week_end.strftime('%b %d') }}"
+                data-settlement-income="{{ s.total_income }}">
+            <i class="bi bi-trash"></i>
+        </button>
+        {% endif %}
+    </div>
+</td>
                 </tr>
                 {% endfor %}
             </tbody>
@@ -121,4 +132,41 @@
     </div>
     {% endif %}
 </div>
+<script>
+	// Add this to the scripts block in history.html
+{% if current_user.role == 'admin' %}
+// Quick delete from history table
+document.addEventListener('DOMContentLoaded', function() {
+    document.querySelectorAll('.delete-settlement-btn').forEach(button => {
+        button.addEventListener('click', function() {
+            const settlementId = this.dataset.settlementId;
+            const settlementWeek = this.dataset.settlementWeek;
+            const settlementIncome = this.dataset.settlementIncome;
+
+            if (confirm(`Delete settlement for ${settlementWeek} (Income: KSH ${settlementIncome})? This action cannot be undone.`)) {
+                fetch(`/admin/delete_settlement/${settlementId}`, {
+                    method: 'POST'
+                })
+                .then(response => {
+                    if (response.redirected) {
+                        window.location.href = response.url;
+                    } else {
+                        return response.json();
+                    }
+                })
+                .then(result => {
+                    if (result && !result.success) {
+                        alert(result.message || 'Error deleting settlement');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('Error deleting settlement');
+                });
+            }
+        });
+    });
+});
+{% endif %}
+</script>
 {% endblock %}

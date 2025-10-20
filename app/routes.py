@@ -540,3 +540,61 @@ def not_found_error(error):
 def internal_error(error):
     db.session.rollback()
     return render_template('errors/500.html'), 500
+
+# Add this to routes.py for AJAX support
+@main_bp.route('/api/delete_settlement/<int:settlement_id>', methods=['POST'])
+@login_required
+def api_delete_settlement(settlement_id):
+    """API endpoint for AJAX settlement deletion"""
+    if current_user.role != 'admin':
+        return jsonify({'success': False, 'message': 'Admin access required'})
+
+    try:
+        settlement = Settlement.query.get_or_404(settlement_id)
+
+        if settlement.is_completed:
+            return jsonify({'success': False, 'message': 'Cannot delete completed settlements'})
+
+        # Store details for logging
+        settlement_details = {
+            'week_start': settlement.week_start,
+            'week_end': settlement.week_end,
+            'total_income': settlement.total_income
+        }
+
+        # Get related data
+        settlement_items = SettlementItem.query.filter_by(settlement_id=settlement_id).all()
+
+        # Reverse debt payment
+        debt = Debt.query.first()
+        if debt and settlement.debt_deduction > 0:
+            debt.remaining_debt += settlement.debt_deduction
+            if debt.remaining_debt > debt.total_debt:
+                debt.total_debt = debt.remaining_debt
+
+        # Delete items and settlement
+        for item in settlement_items:
+            db.session.delete(item)
+
+        db.session.delete(settlement)
+
+        # Log transaction
+        transaction = Transaction(
+            user_id=current_user.id,
+            action='DELETE_SETTLEMENT',
+            details=f'Deleted settlement for week {settlement_details["week_start"]} to {settlement_details["week_end"]}',
+            ip_address=request.remote_addr
+        )
+        db.session.add(transaction)
+
+        db.session.commit()
+
+        return jsonify({
+            'success': True,
+            'message': f'Settlement deleted successfully',
+            'redirect': url_for('main.history')
+        })
+
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': f'Error deleting settlement: {str(e)}'})

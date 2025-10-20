@@ -429,3 +429,69 @@ def api_create_user():
     except Exception as e:
         db.session.rollback()
         return jsonify({'success': False, 'message': f'Error creating user: {str(e)}'})
+
+
+
+@admin_bp.route('/delete_settlement/<int:settlement_id>', methods=['POST'])
+@admin_required
+def delete_settlement(settlement_id):
+    """Delete a settlement and rollback all related data"""
+    try:
+        settlement = Settlement.query.get_or_404(settlement_id)
+        
+        # Check if settlement is already completed
+        if settlement.is_completed:
+            flash('Cannot delete completed settlements', 'error')
+            return redirect(url_for('main.settlement_detail', settlement_id=settlement_id))
+        
+        # Store settlement details for logging
+        settlement_details = {
+            'week_start': settlement.week_start,
+            'week_end': settlement.week_end,
+            'total_income': settlement.total_income,
+            'net_distributable': settlement.net_distributable
+        }
+        
+        # Get all related data
+        settlement_items = SettlementItem.query.filter_by(settlement_id=settlement_id).all()
+        
+        # Calculate debt adjustment (reverse the debt payment)
+        debt = Debt.query.first()
+        if not debt:
+            debt = Debt(total_debt=0, remaining_debt=0)
+            db.session.add(debt)
+        
+        # Reverse debt payment - add back to remaining debt
+        debt_payment = settlement.debt_deduction
+        if debt_payment > 0:
+            debt.remaining_debt += debt_payment
+            # If this was new debt (no existing debt), reduce total debt
+            if debt.remaining_debt > debt.total_debt:
+                debt.total_debt = debt.remaining_debt
+        
+        # Delete settlement items
+        for item in settlement_items:
+            db.session.delete(item)
+        
+        # Delete the settlement
+        db.session.delete(settlement)
+        
+        # Log the transaction
+        transaction = Transaction(
+            user_id=current_user.id,
+            action='DELETE_SETTLEMENT',
+            details=f'Deleted settlement for week {settlement_details["week_start"]} to {settlement_details["week_end"]}. Income: KSH {settlement_details["total_income"]}, Net: KSH {settlement_details["net_distributable"]}',
+            ip_address=request.remote_addr
+        )
+        db.session.add(transaction)
+        
+        db.session.commit()
+        
+        flash(f'Settlement for {settlement_details["week_start"].strftime("%b %d")} - {settlement_details["week_end"].strftime("%b %d")} deleted successfully', 'success')
+        
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error deleting settlement: {str(e)}', 'error')
+        return redirect(url_for('main.settlement_detail', settlement_id=settlement_id))
+    
+    return redirect(url_for('main.history'))
